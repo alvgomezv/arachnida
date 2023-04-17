@@ -6,19 +6,47 @@
 #    By: alvgomez <alvgomez@student.42.fr>          +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/04/14 19:24:36 by alvgomez          #+#    #+#              #
-#    Updated: 2023/04/14 19:38:57 by alvgomez         ###   ########.fr        #
+#    Updated: 2023/04/17 13:12:16 by alvgomez         ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
 import os
-import sys
-import exifread
+import argparse
+from PIL import Image
+from PIL.ExifTags import TAGS 
+
+class Scorpion:
+    def __init__(self, files):
+        self.files = files
+
+    def open_paths(self):
+        for path in self.files:
+            with Image.open(path) as img:
+                print(f"Name: {os.path.basename(path)}")
+                print(f"- Format: {img.format}")
+                print(f"- Mode: {img.mode}")
+                print(f"- Size: {img.size}")
+                exif = img.getexif()
+                if exif:
+                    for tag_id, value in exif.items():
+                        tag = TAGS.get(tag_id, tag_id)
+                        print(f"EXIF {tag}: {value}")
+                else:
+                    print("No EXIF data found")
+                print()
+
+def parse_arguments():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("paths", nargs='*')
+    arg = parser.parse_args()
+    for path in arg.paths:
+        if not os.path.exists(path):
+            print(f"Error: Path {path} does not exist")
+            arg.paths.remove(path)
+    print(arg.paths)
+    return arg.paths
 
 if __name__ == "__main__":
-    if len(sys.argv) == 1:
-        print("No file provided")
-    elif len(sys.argv) > 1:
-        with open(sys.argv[1], 'rb') as f:
-            tags = exifread.process_file(f)
-            print(tags)
-            
+    files = parse_arguments()
+    scorpion = Scorpion(files)
+    scorpion.open_paths()              

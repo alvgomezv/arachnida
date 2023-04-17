@@ -6,7 +6,7 @@
 #    By: alvgomez <alvgomez@student.42.fr>          +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/04/11 13:50:20 by alvgomez          #+#    #+#              #
-#    Updated: 2023/04/14 16:58:36 by alvgomez         ###   ########.fr        #
+#    Updated: 2023/04/17 13:14:58 by alvgomez         ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -39,18 +39,11 @@ def get_img_urls(url):
     return images
 
 def picture_format(img):
-    format = None
-    if img[-4:] == ".jpg":
-        format = ".jpg"
-    elif img[-5:] == ".jpeg":
-        format = ".jpeg"
-    elif img[-4:] == ".png":
-        format = ".png"
-    elif img[-4:] == ".gif":
-        format = ".gif"
-    elif img[-4:] == ".bmp":
-        format = ".bmp"
-    return format
+    formats = [".jpg", ".jpeg", ".png", ".gif", ".bmp"]
+    for ext in formats:
+        if ext in img:
+            return ext
+    return None
         
 def get_img_into_folder(images, file="./data", round=0):
     if not os.path.exists(file):
