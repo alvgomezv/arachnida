@@ -1,0 +1,34 @@
+#!/goinfre/alvgomez/miniconda3/envs/42cyber-alvgomez/bin/python
+# **************************************************************************** #
+#                                                                              #
+#                                                         :::      ::::::::    #
+#    ft_otp                                             :+:      :+:    :+:    #
+#                                                     +:+ +:+         +:+      #
+#    By: alvgomez <alvgomez@student.42.fr>          +#+  +:+       +#+         #
+#                                                 +#+#+#+#+#+   +#+            #
+#    Created: 2023/04/17 17:41:59 by alvgomez          #+#    #+#              #
+#    Updated: 2023/04/17 17:42:00 by alvgomez         ###   ########.fr        #
+#                                                                              #
+# **************************************************************************** #
+
+import os
+import argparse
+
+class Otp:
+    def __init__(self, args):
+        if args.hex_key:
+            self.hex = args.hex_key
+        if args.otp_key:
+            self.otp = args.otp_key
+        
+
+def parse_arguments():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-g", type=str, action="store", dest="hex_key", help="Store key of at lear 64 characters")
+    parser.add_argument("-k", type=str, action="store", dest="opt_key", help="Generate new temporary password and print it")
+    arg = parser.parse_args()
+    return arg
+
+if __name__ == "__main__":
+    args = parse_arguments()
+    otp = Otp(args)

@@ -12,6 +12,7 @@
 # **************************************************************************** #
 
 import requests
+import argparse
 from bs4 import BeautifulSoup
 import shutil
 import os
@@ -22,24 +23,21 @@ all_links = []
 pictures = []
 
 def get_img_urls(url):
-    try:
-        page = requests.get(url)
-        soup = BeautifulSoup(page.content, "html.parser")
-    except:
-        if "file://" in url:
-          file = open(url[7:], "r").read()
-          soup = BeautifulSoup(file, "html.parser")
     images = []
+    try:
+        file = open(url, "r").read()
+        soup = BeautifulSoup(file, "html.parser")
+    except:
+        try:
+            page = requests.get(url)
+            soup = BeautifulSoup(page.content, "html.parser")
+        except:
+            return images
     for img in soup.findAll('img'):
         try:
-            if img.get('src')[0] == '/':
-                if ('https:'+ img.get('src')) not in all_images:
-                    images.append('https:'+ img.get('src'))
-                    all_images.append('https:'+ img.get('src'))
-            else:
-                if (img.get('src')) not in all_images:
-                    images.append(img.get('src'))
-                    all_images.append(img.get('src'))
+            if (img.get('src')) not in all_images:
+                images.append(img.get('src'))
+                all_images.append(img.get('src'))
         except:
             pass
     return images
@@ -58,17 +56,16 @@ def get_img_into_folder(images, url, file="./data", round=0):
     for img in images:
         try:
             obj = None
-            if "file://" in url:
-                if "file://" in img:
-                    obj = open(img[7:], "rb")
-                else:
-                    obj = open(os.path.join(os.path.dirname(url)[7:], img), "rb")
+            if os.path.exists(url) and os.path.exists(img):
+                obj = open(img, "rb")
             else:
                 req = requests.get(img, stream = True)
                 if req.status_code == 200:
                     obj = req.raw
+                else:
+                    obj = None
             format = picture_format(img)
-            if format:
+            if format and obj:
                 for item in pictures:
                     if f"pic_{i}" in item:
                         i += 1
@@ -79,63 +76,60 @@ def get_img_into_folder(images, url, file="./data", round=0):
         except:
             pass
     
-def get_links(url, first_url, n_links=None):
-    page = requests.get(url)
-    soup = BeautifulSoup(page.content, "html.parser")
+def get_links(url, first_url):
     links = []
+    try:
+        file = open(url, "r").read()
+        soup = BeautifulSoup(file, "html.parser")
+    except:
+        try:
+            page = requests.get(url)
+            soup = BeautifulSoup(page.content, "html.parser")
+        except:
+            return links
     i = 0
     for link in soup.findAll('a', href=True):
-        if n_links != None:
-            if i >= n_links:
-                return links
         try:
-            if first_url in link.get('href'):
+            if first_url in link.get('href') or os.path.dirname(first_url) in link.get('href'):
                 links.append(link.get('href'))
                 i += 1
         except:
             pass
     return links
     
-def recursive_download(link=None, first_url=None, n_links=None, depth=5, round=0, file="./data"):
+def recursive_download(link=None, first_url=None, depth=5, round=0, file="./data"):
     if round >= depth:
         pass
     else: 
         all_links.append(link)
         images = get_img_urls(link)
         get_img_into_folder(images, link, file, round)
-        links = get_links(link, first_url, n_links)
+        links = get_links(link, first_url)
         round += 1
-        for url in links:
-            if url not in all_links:
-                recursive_download(url, first_url, n_links, depth, round, file)  
+        if links:
+            for url in links:
+                if url not in all_links:
+                    recursive_download(url, first_url, depth, round, file)  
      
-if __name__ == "__main__":
-    #number of links
-    l = None
-    
-    if len(sys.argv) == 1:
-        print("No url provided")
-    elif len(sys.argv) == 2:
-        url = sys.argv[1]
-        images = get_img_urls(url)
-        get_img_into_folder(images, url)
-    elif len(sys.argv) > 5:
-        print("To many arguments")
-    else:
-        if sys.argv[2] == "-r" and len(sys.argv) == 3:
-            recursive_download(link=sys.argv[1], first_url=sys.argv[1], n_links=l)
-        elif sys.argv[2] == "-p":
-            if len(sys.argv) != 4:
-                print("No path provided")
-            else:
-                recursive_download(link=sys.argv[1], first_url=sys.argv[1], n_links=l, file=sys.argv[3])
-        elif sys.argv[2] == "-r" and sys.argv[3] == "-l":
-            if len(sys.argv) != 5:
-                print("Maximum depth needed")
-            else:
-                d = int(sys.argv[4])
-                recursive_download(link=sys.argv[1], first_url=sys.argv[1], n_links=l, depth=d)
-    
+def parse_arguments():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('link', type=str, action="store", help="The url of the site to scrap")
+    parser.add_argument('-r', '--recursive', action="store_true", help="Recursive option")
+    parser.add_argument('-l', '--depth', type=int, action="store", help="When recursive option is on, select level of depth")
+    parser.add_argument('-p', '--path', type=str, action="store", help="Indicates the path where to download files")
+    arg = parser.parse_args()
+    if arg.depth and not arg.recursive:
+        raise parser.error("-r is required for -l option")
+    if arg.recursive is not True:
+        arg.depth = 1
+    if not arg.depth:
+        arg.depth = 5
+    if not arg.path:
+        arg.path = "./data"
+    return arg
 
+if __name__ == "__main__":
+    arg = parse_arguments()
+    recursive_download(link=arg.link, first_url=arg.link, depth=arg.depth, file=arg.path)
 
     
