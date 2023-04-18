@@ -13,22 +13,79 @@
 
 import os
 import argparse
+from oath import totp
+import base64
+import time
+from datetime import datetime, timezone
+import hmac
+import hashlib
+import struct
+
+def is_hex(text):
+    try:
+        int(text, 16)
+        return True
+    except ValueError:
+        return False
+
+def oath_value(key_given): 
+    key = open(key_given, "rb").read()
+    otp = totp(key, format='dec6', period=30)
+    print(otp)
+
 
 class Otp:
-    def __init__(self, args):
-        if args.hex_key:
-            self.hex = args.hex_key
-        if args.otp_key:
-            self.otp = args.otp_key
+    def __init__(self,args):
+        self.hex_key = args.hex_key
+        self.otp_key = args.otp_key
+
+    def save_key(self):
+        try:
+            key = open(self.hex_key, "rb").read()
+        except:
+            raise Exception("Invalid Key")
+        else:
+            #if is_hex(key) and len(key) >= 64:
+                try:
+                    otp_key = open("ft_otp.key", "wb")
+                    otp_key.write(key)
+                    otp_key.close()
+                    print("Key was successfully saved in ft_otp.key.")
+                except:
+                    raise Exception("Key could not be saved")
+            #else:
+            #    raise Exception("Key must be 64 hexadecimal characters")
+
+    def generate_password(self):
+        counter = (int(time.time() / 30))
+        counter_bytes = counter.to_bytes(8, byteorder="big")
+        key_bytes = open(self.otp_key, "rb").read()
+        hmac_sha1 = hmac.new(key_bytes, counter_bytes, hashlib.sha1).digest()
         
+        offset = hmac_sha1[-1] & 0x0F
+        otp_bytes = hmac_sha1[offset:offset+4]
+        otp_int = int.from_bytes(otp_bytes, byteorder="big") + 0x7FFFFFFF
+        otp = str(otp_int % (10 ** 6))
+    
+        print(otp)
+
 
 def parse_arguments():
     parser = argparse.ArgumentParser()
     parser.add_argument("-g", type=str, action="store", dest="hex_key", help="Store key of at lear 64 characters")
-    parser.add_argument("-k", type=str, action="store", dest="opt_key", help="Generate new temporary password and print it")
+    parser.add_argument("-k", type=str, action="store", dest="otp_key", help="Generate new temporary password and print it")
     arg = parser.parse_args()
     return arg
 
 if __name__ == "__main__":
     args = parse_arguments()
     otp = Otp(args)
+    if otp.hex_key:
+        otp.save_key()
+    if otp.otp_key:
+        otp.generate_password()
+
+    oath_value(otp.otp_key)
+
+    
+
